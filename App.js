@@ -6,6 +6,7 @@ import { GameScreen } from './src/Screens/GameScreen';
 
 const Stack = createNativeStackNavigator();
 
+// Controlador entre as telas do jogo
 export default function App() {
   return (
     <NavigationContainer>
