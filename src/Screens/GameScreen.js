@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome'
 
 // Operadores que serão utilizados nas equações
@@ -17,18 +18,39 @@ function shuffleArray(array) {
 
 // Tela principal do jogo
 export function GameScreen({ navigation }) {
-  // Exibe a equação assim que o jogador entra na tela do jogo
-  useEffect(() => {
-    generateEquation();
-  }, []);
+  
+  // Inicializa o cronômetro assim que o jogador muda de tela
+  useFocusEffect(
+    React.useCallback(() => {
+      setTempo(15);
+      generateEquation();
+  
+      const timer = setInterval(() => {
+        setTempo((prevTempo) => {
+          if (prevTempo <= 1) {
+            setStreak(0);
+            generateEquation();
+            return 15;
+          }
+          return prevTempo - 1;
+        });
+      }, 1000);
+  
+      return () => {
+        clearInterval(timer);
+      };
+    }, [])
+  );  
 
-  const [equation, setEquation] = useState();
-  const [result, setResult] = useState();
-  const [answers, setAnswers] = useState([]);
+  const [equation, setEquation] = useState();    // useState para atualizar a equação
+  const [result, setResult] = useState();        // useState para atualizar os resultados
+  const [answers, setAnswers] = useState([]);    // useState para atualizar as respostas
+  const [tempo, setTempo] = useState(15);        // useState para atualizar o cronômetro
+  const [rodando, setRodando] = useState(false); // useState para verificar se o cronômetro está em funcionamento
+  const [streak, setStreak] = useState(0);       // useState para exibir a sequência de acertos do jogador
 
   // Função para gerar uma equação simples
   const generateEquation = () => {
-    
     // Intervalo Minímo e Máximo
     let min = 0;
     let max = 100;
@@ -40,7 +62,7 @@ export function GameScreen({ navigation }) {
     // Soerteia um operador dentre aqueles que estão no vetor
     let operator = operators[Math.floor(Math.random() * operators.length)];
     if (operator == 'x') {
-      op1 = Math.floor(Math.random() * (max - min)) + min;
+      op1 = Math.floor(Math.random() * (20 - min)) + min;
       op2 = Math.floor(Math.random() * (15 - min)) + min;
     }
 
@@ -81,6 +103,27 @@ export function GameScreen({ navigation }) {
     setAnswers(options);
   };
 
+  // Função para o resetar cronômetro
+  const resetStopWatch = () => {
+    setTempo(15);
+  };
+
+  // Função para incrementar ou decrementar a sequência de acertos
+  const checkStreakCounter = (answer) => {
+    if (answer == result) {
+      setStreak((prevStreak) => prevStreak + 1);
+    } else {
+      setStreak(0);
+    }
+  };
+
+  // Função para Verificar se a resposta está correta, Atualizar o streak, Gerar nova equação, Resetar o cronômetro
+  const handleAnswer = (answer) => {
+    checkStreakCounter(answer);
+    generateEquation();
+    resetStopWatch();
+  };
+
   return (
     <View style={styles.container}>
 
@@ -90,17 +133,27 @@ export function GameScreen({ navigation }) {
       </TouchableOpacity>
     </View>
 
+    <View style={styles.stopWatchContainer}>
+      <Icon name="clock-o" size={22} color={"white"}/>
+      <Text style={styles.stopWatch}>{'\t'}{tempo}s</Text>
+    </View>
+
     <Text style={styles.equation}>{equation}</Text>
 
-    <TouchableOpacity style={styles.responseContainer1} onPress={() => generateEquation()}>
+    <View style={styles.streakCounterContainer}>
+      <Icon name="fire" size={30} color={"orange"}/>
+      <Text style={styles.streakCounter}>{'\t'}{streak}</Text>
+    </View>
+
+    <TouchableOpacity style={styles.responseContainer1} onPress={() => handleAnswer(answers[0])}>
       <Text style={styles.responseText1}>{answers[0]}</Text>
     </TouchableOpacity>
 
-    <TouchableOpacity style={styles.responseContainer2} onPress={() => generateEquation()}>
+    <TouchableOpacity style={styles.responseContainer2} onPress={() => handleAnswer(answers[1])}>
       <Text style={styles.responseText2}>{answers[1]}</Text>
     </TouchableOpacity>
 
-    <TouchableOpacity style={styles.responseContainer3} onPress={() => generateEquation()}>
+    <TouchableOpacity style={styles.responseContainer3} onPress={() => handleAnswer(answers[2])}>
       <Text style={styles.responseText3}>{answers[2]}</Text>
     </TouchableOpacity>
 
@@ -125,43 +178,77 @@ let styles = StyleSheet.create({
     color: 'rgb(0, 0, 0)',
     backgroundColor: 'rgb(255, 255, 255)',
     borderRadius: 20,
-    paddingHorizontal: 5,
-    paddingVertical: 3,
+    paddingHorizontal: '10%',
+    paddingVertical: '7%',
+  },
+  stopWatchContainer: {
+    alignItems: 'center',
+    position: 'absolute',
+    marginTop: '15%',
+    right: '8%',
+    bottom: '96%',
+    flexDirection: 'row',
+  },
+  stopWatch: {
+    color: 'rgb(255, 255, 255)',
+    fontSize: 22,
+    fontWeight: 'bold',
   },
   equation: {
     color: 'rgb(255, 255, 255)',
     fontSize: 48,
     fontWeight: 'bold',
-    marginTop: '35%'
+    marginTop: '30%'
+  },
+  streakCounterContainer: {
+    marginTop: '20%',
+    flexDirection: 'row',
+  },
+  streakCounter: {
+    color: 'rgb(255, 255, 255)',
+    fontSize: 23,
+    fontWeight: 'bold',
   },
   responseContainer1: {
+    numberOfLines: 1,
+    alignItems: 'center',
     backgroundColor: 'rgb(255, 255, 255)',
     borderRadius: 30,
     paddingHorizontal: 5,
     paddingVertical: 5,
-    marginTop: '50%'
+    marginTop: '20%',
+    width: '70%',
+    height: '8%',
   },
   responseText1: {
     color: 'rgb(0, 0, 0)',
     fontSize: 40,
   },
   responseContainer2: {
+    numberOfLines: 1,
+    alignItems: 'center',
     backgroundColor: 'rgb(255, 255, 255)',
     borderRadius: 30,
     paddingHorizontal: 5,
     paddingVertical: 5,
-    marginTop: '10%'
+    marginTop: '10%',
+    width: '70%',
+    height: '8%',
   },
   responseText2: {
     color: 'rgb(0, 0, 0)',
     fontSize: 40,
   },
   responseContainer3: {
+    numberOfLines: 1,
+    alignItems: 'center',
     backgroundColor: 'rgb(255, 255, 255)',
     borderRadius: 30,
     paddingHorizontal: 5,
     paddingVertical: 5,
-    marginTop: '10%'
+    marginTop: '10%',
+    width: '70%',
+    height: '8%',
   },
   responseText3: {
     color: 'rgb(0, 0, 0)',
